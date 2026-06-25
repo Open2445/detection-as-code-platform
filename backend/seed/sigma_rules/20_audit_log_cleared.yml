@@ -1,0 +1,28 @@
+title: Windows Security Audit Log Cleared
+name: audit_log_cleared
+status: experimental
+description: Detects clearing of Windows Security Event Log (EventID 1102) or System Log (EventID 104), a common anti-forensics technique
+references:
+  - https://attack.mitre.org/techniques/T1070/001/
+author: Detection-as-Code Platform
+date: 2024/01/01
+tags:
+  - attack.defense-evasion
+  - attack.t1070.001
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_1102:
+    EventID: 1102
+  selection_104:
+    EventID: 104
+  selection_wevtutil:
+    Image|endswith: '\wevtutil.exe'
+    CommandLine|contains:
+      - 'cl '
+      - 'clear-log'
+  condition: 1 of selection*
+falsepositives:
+  - Legitimate log management and rotation policies
+level: high

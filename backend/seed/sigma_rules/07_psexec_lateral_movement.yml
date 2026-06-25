@@ -1,0 +1,26 @@
+title: Lateral Movement via PsExec
+name: lateral_movement_psexec
+status: experimental
+description: Detects lateral movement using PsExec or similar remote execution tools
+references:
+  - https://attack.mitre.org/techniques/T1570/
+author: Detection-as-Code Platform
+date: 2024/01/01
+tags:
+  - attack.lateral-movement
+  - attack.t1570
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_image:
+    Image|contains:
+      - '\psexec'
+      - '\PsExec'
+  selection_service:
+    Image|endswith: '\services.exe'
+    CommandLine|contains: 'PSEXESVC'
+  condition: 1 of selection*
+falsepositives:
+  - Legitimate remote administration by IT staff
+level: high

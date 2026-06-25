@@ -1,0 +1,77 @@
+[
+  {
+    "EventID": 1,
+    "Computer": "DESKTOP-ANALYST",
+    "UserName": "jdoe",
+    "UtcTime": "2026-06-21T17:45:00Z",
+    "EventData": {
+      "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "CommandLine": "powershell.exe -enc ZQBjAGgAbwAgAEgAZQBsAGwAbwAgAFcAbwByAGwAZAA=",
+      "ParentImage": "C:\\Windows\\explorer.exe",
+      "ParentCommandLine": "explorer.exe",
+      "User": "CORP\\jdoe",
+      "ProcessId": "4820",
+      "IntegrityLevel": "High"
+    }
+  },
+  {
+    "EventID": 1,
+    "Computer": "WORKSTATION-05",
+    "UserName": "alice",
+    "UtcTime": "2026-06-21T17:46:30Z",
+    "EventData": {
+      "Image": "C:\\Windows\\System32\\cmd.exe",
+      "CommandLine": "cmd.exe /c calc.exe",
+      "ParentImage": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+      "ParentCommandLine": "winword.exe",
+      "User": "CORP\\alice",
+      "ProcessId": "5112",
+      "IntegrityLevel": "Medium"
+    }
+  },
+  {
+    "EventID": 1,
+    "Computer": "DC-01",
+    "UserName": "administrator",
+    "UtcTime": "2026-06-21T17:48:15Z",
+    "EventData": {
+      "Image": "C:\\tools\\mimikatz.exe",
+      "CommandLine": "mimikatz.exe sekurlsa::logonpasswords privilege::debug exit",
+      "ParentImage": "C:\\Windows\\System32\\cmd.exe",
+      "ParentCommandLine": "cmd.exe",
+      "User": "CORP\\administrator",
+      "ProcessId": "9102",
+      "IntegrityLevel": "System"
+    }
+  },
+  {
+    "EventID": 1,
+    "Computer": "DESKTOP-ANALYST",
+    "UserName": "jdoe",
+    "UtcTime": "2026-06-21T17:40:00Z",
+    "EventData": {
+      "Image": "C:\\Windows\\System32\\notepad.exe",
+      "CommandLine": "notepad.exe F:\\notes.txt",
+      "ParentImage": "C:\\Windows\\explorer.exe",
+      "ParentCommandLine": "explorer.exe",
+      "User": "CORP\\jdoe",
+      "ProcessId": "1024",
+      "IntegrityLevel": "Medium"
+    }
+  },
+  {
+    "EventID": 1,
+    "Computer": "WORKSTATION-05",
+    "UserName": "alice",
+    "UtcTime": "2026-06-21T17:41:20Z",
+    "EventData": {
+      "Image": "C:\\Program Files\\Chrome\\chrome.exe",
+      "CommandLine": "chrome.exe --no-sandbox",
+      "ParentImage": "C:\\Windows\\explorer.exe",
+      "ParentCommandLine": "explorer.exe",
+      "User": "CORP\\alice",
+      "ProcessId": "8840",
+      "IntegrityLevel": "Medium"
+    }
+  }
+]

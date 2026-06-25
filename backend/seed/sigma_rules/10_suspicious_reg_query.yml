@@ -1,0 +1,31 @@
+title: Suspicious Registry Query
+name: suspicious_reg_query
+status: experimental
+description: Detects suspicious registry queries that may indicate system reconnaissance or credential harvesting
+references:
+  - https://attack.mitre.org/techniques/T1012/
+author: Detection-as-Code Platform
+date: 2024/01/01
+tags:
+  - attack.discovery
+  - attack.t1012
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+      - '\reg.exe'
+      - '\regedit.exe'
+    CommandLine|contains:
+      - 'query'
+    CommandLine|contains:
+      - 'HKLM\SAM'
+      - 'HKLM\SECURITY'
+      - 'HKLM\SYSTEM\CurrentControlSet\Control\Lsa'
+      - 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run'
+      - 'winlogon'
+  condition: selection
+falsepositives:
+  - Legitimate system administration registry checks
+level: medium
