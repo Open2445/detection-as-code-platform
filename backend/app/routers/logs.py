@@ -19,21 +19,23 @@ async def upload_logs(
     db: Session = Depends(get_db),
 ):
     """
-    Upload a JSON log file (Sysmon or Windows Event logs).
+    Upload a log file (JSON array, NDJSON, or native Windows .evtx).
 
     Accepts:
+    - EVTX: binary Windows Event log file (.evtx)
     - JSON array: `[{...}, {...}]`
     - NDJSON: one JSON object per line
     """
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    if not file.filename.lower().endswith(".json"):
+    ext = file.filename.lower()
+    if not (ext.endswith(".json") or ext.endswith(".evtx")):
         raise HTTPException(
             status_code=400,
-            detail="Only .json files are supported. "
-                   "Please convert Sysmon/EVTX logs to JSON first.",
+            detail="Only .json and .evtx files are supported.",
         )
+
 
     content = await file.read()
     if not content:

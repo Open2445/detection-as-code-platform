@@ -71,7 +71,7 @@ export default function Logs() {
     <div className="page">
       <div className="page-header">
         <h1 className="page-title">Log Management</h1>
-        <p className="page-subtitle">Upload Sysmon/Windows Event JSON logs and run Sigma detections</p>
+        <p className="page-subtitle">Upload Sysmon/Windows Event JSON or binary EVTX logs and run Sigma detections</p>
       </div>
 
       {/* Upload Zone */}
@@ -86,15 +86,15 @@ export default function Logs() {
           <Upload size={40} />
         </div>
         <div className="upload-zone-title">
-          {uploadMutation.isPending ? 'Uploading...' : 'Drop JSON log file here'}
+          {uploadMutation.isPending ? 'Uploading...' : 'Drop EVTX or JSON log file here'}
         </div>
         <div className="upload-zone-sub">
-          Accepts JSON array or NDJSON format · Sysmon or Windows Event Logs
+          Accepts native binary .evtx, JSON array, or NDJSON format · Sysmon & Windows Event Logs
         </div>
         <input
           ref={fileInputRef}
           type="file"
-          accept=".json"
+          accept=".json,.evtx"
           style={{ display: 'none' }}
           onChange={e => {
             const file = e.target.files?.[0];
@@ -131,8 +131,9 @@ export default function Logs() {
           <div className="empty-state" style={{ padding: '40px 0' }}>
             <Upload size={32} className="empty-state-icon" />
             <div className="empty-state-title">No logs uploaded yet</div>
-            <div className="empty-state-sub">Upload a JSON log file to get started</div>
+            <div className="empty-state-sub">Upload an EVTX or JSON log file to get started</div>
           </div>
+
         ) : (
           <div className="table-wrapper">
             <table>
