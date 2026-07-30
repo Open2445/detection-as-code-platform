@@ -4,8 +4,8 @@
 import axios from 'axios';
 import type {
   UploadBatch, UploadResponse, LogEntryPage,
-  SigmaRule, SigmaRuleList,
-  Alert, AlertPage, AlertFilters, DetectionRunResult,
+  SigmaRule, SigmaRuleList, RuleValidationPayload,
+  Alert, AlertPage, AlertFilters, AlertTriagePayload, AlertTriageHistory, AlertCounters, DetectionRunResult,
   DashboardStats, TimelineResponse, MitreCoverage,
 } from '../types';
 
@@ -72,6 +72,11 @@ export const rulesApi = {
     return res.data;
   },
 
+  updateValidation: async (ruleId: number, payload: RuleValidationPayload): Promise<SigmaRule> => {
+    const res = await api.put<SigmaRule>(`/rules/${ruleId}/validation`, payload);
+    return res.data;
+  },
+
   delete: async (ruleId: number): Promise<void> => {
     await api.delete(`/rules/${ruleId}`);
   },
@@ -110,6 +115,21 @@ export const alertsApi = {
     return res.data;
   },
 
+  getCounters: async (): Promise<AlertCounters> => {
+    const res = await api.get<AlertCounters>('/alerts/counters');
+    return res.data;
+  },
+
+  getHistory: async (alertId: number): Promise<AlertTriageHistory[]> => {
+    const res = await api.get<AlertTriageHistory[]>(`/alerts/${alertId}/history`);
+    return res.data;
+  },
+
+  updateTriage: async (alertId: number, payload: AlertTriagePayload): Promise<Alert> => {
+    const res = await api.put<Alert>(`/alerts/${alertId}/triage`, payload);
+    return res.data;
+  },
+
   exportCsv: (filters: AlertFilters = {}): void => {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([k, v]) => {
@@ -122,6 +142,7 @@ export const alertsApi = {
     link.click();
   },
 };
+
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const dashboardApi = {

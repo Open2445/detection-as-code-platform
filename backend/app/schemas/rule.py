@@ -26,12 +26,42 @@ class SigmaRuleRawCreate(BaseModel):
     format: str = "auto"  # "yaml", "json", "auto"
 
 
+ALLOWED_VALIDATION_STATUSES = {"unvalidated", "validated_in_lab", "needs_tuning"}
+
+
 class SigmaRuleUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     severity: Optional[str] = None
     yaml_content: Optional[str] = None
     enabled: Optional[bool] = None
+    validation_status: Optional[str] = None
+    validation_notes: Optional[str] = None
+    validation_evidence_batch_id: Optional[int] = None
+    validation_evidence_filename: Optional[str] = None
+    primary_validated_rule: Optional[bool] = None
+
+    @field_validator("validation_status")
+    @classmethod
+    def validate_validation_status(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v.lower() not in ALLOWED_VALIDATION_STATUSES:
+            raise ValueError(f"validation_status must be one of {ALLOWED_VALIDATION_STATUSES}")
+        return v.lower() if v is not None else v
+
+
+class SigmaRuleValidationUpdate(BaseModel):
+    validation_status: str
+    validation_notes: Optional[str] = None
+    validation_evidence_batch_id: Optional[int] = None
+    validation_evidence_filename: Optional[str] = None
+    primary_validated_rule: bool = False
+
+    @field_validator("validation_status")
+    @classmethod
+    def validate_validation_status(cls, v: str) -> str:
+        if v.lower() not in ALLOWED_VALIDATION_STATUSES:
+            raise ValueError(f"validation_status must be one of {ALLOWED_VALIDATION_STATUSES}")
+        return v.lower()
 
 
 class SigmaRuleOut(BaseModel):
@@ -51,6 +81,14 @@ class SigmaRuleOut(BaseModel):
     updated_at: Optional[datetime] = None
     enabled: bool
 
+    # Validation Metadata
+    validation_status: str = "unvalidated"
+    validated_at: Optional[datetime] = None
+    validation_notes: Optional[str] = None
+    validation_evidence_batch_id: Optional[int] = None
+    validation_evidence_filename: Optional[str] = None
+    primary_validated_rule: bool = False
+
     @property
     def mitre_techniques_list(self) -> List[str]:
         if not self.mitre_techniques:
@@ -67,3 +105,4 @@ class SigmaRuleOut(BaseModel):
 class SigmaRuleListOut(BaseModel):
     total: int
     items: List[SigmaRuleOut]
+

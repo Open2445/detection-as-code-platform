@@ -175,6 +175,23 @@ def get_mitre_coverage(db: Session) -> dict:
     }
 
 
+def get_alert_counters(db: Session) -> dict:
+    """Return metric counters for open alerts and classifications."""
+    open_alerts = db.query(func.count(Alert.id)).filter(Alert.triage_status == "open").scalar() or 0
+    true_positives = db.query(func.count(Alert.id)).filter(Alert.classification == "true_positive").scalar() or 0
+    false_positives = db.query(func.count(Alert.id)).filter(Alert.classification == "false_positive").scalar() or 0
+    duplicates = db.query(func.count(Alert.id)).filter(Alert.classification == "duplicate").scalar() or 0
+    needs_investigation = db.query(func.count(Alert.id)).filter(Alert.classification == "needs_investigation").scalar() or 0
+
+    return {
+        "open_alerts": open_alerts,
+        "true_positives": true_positives,
+        "false_positives": false_positives,
+        "duplicates": duplicates,
+        "needs_investigation": needs_investigation,
+    }
+
+
 def export_alerts_csv(db: Session, filters: dict) -> str:
     """Export filtered alerts as a CSV string."""
     query = _build_alert_query(db, filters)
@@ -183,13 +200,18 @@ def export_alerts_csv(db: Session, filters: dict) -> str:
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerow([
-        "ID", "Rule Name", "Severity", "Hostname", "Username",
-        "Technique ID", "Technique Name", "Tactic", "Event ID",
-        "Triggered At", "Details",
+        "ID", "Rule Name", "Severity", "Classification", "Triage Status",
+        "Analyst Notes", "Primary Alert ID", "Reviewed At", "Reviewed By",
+        "Hostname", "Username", "Technique ID", "Technique Name", "Tactic",
+        "Event ID", "Triggered At", "Details",
     ])
     for alert in alerts:
         writer.writerow([
             alert.id, alert.rule_name, alert.severity,
+            alert.classification, alert.triage_status,
+            alert.analyst_notes or "", alert.primary_alert_id or "",
+            alert.reviewed_at.isoformat() if alert.reviewed_at else "",
+            alert.reviewed_by or "",
             alert.hostname or "", alert.username or "",
             alert.technique_id or "", alert.technique_name or "",
             alert.tactic or "", alert.event_id or "",
@@ -234,9 +256,14 @@ def _build_alert_query(db: Session, filters: dict):
         q = q.filter(Alert.severity == severity.lower())
     if batch_id := filters.get("batch_id"):
         q = q.filter(Alert.batch_id == batch_id)
+    if classification := filters.get("classification"):
+        q = q.filter(Alert.classification == classification.lower())
+    if triage_status := filters.get("triage_status"):
+        q = q.filter(Alert.triage_status == triage_status.lower())
     if from_date := filters.get("from_date"):
         q = q.filter(Alert.triggered_at >= from_date)
     if to_date := filters.get("to_date"):
         q = q.filter(Alert.triggered_at <= to_date)
 
     return q
+

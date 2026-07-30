@@ -1,6 +1,6 @@
 """Sigma rule ORM model."""
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, ForeignKey
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -35,8 +35,20 @@ class SigmaRule(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     enabled = Column(Boolean, default=True, nullable=False)
 
+    # Rule Validation Metadata
+    validation_status = Column(String(50), default="unvalidated", nullable=False, index=True)
+    validated_at = Column(DateTime, nullable=True)
+    validation_notes = Column(Text, nullable=True)
+    validation_evidence_batch_id = Column(
+        Integer, ForeignKey("upload_batches.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    validation_evidence_filename = Column(String(255), nullable=True)
+    primary_validated_rule = Column(Boolean, default=False, nullable=False)
+
     # Relationships
     alerts = relationship("Alert", back_populates="rule")
+    validation_evidence_batch = relationship("UploadBatch")
 
     def __repr__(self) -> str:
-        return f"<SigmaRule id={self.id} name={self.name!r} severity={self.severity!r}>"
+        return f"<SigmaRule id={self.id} name={self.name!r} severity={self.severity!r} validation={self.validation_status!r}>"
+

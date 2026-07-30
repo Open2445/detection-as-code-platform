@@ -35,8 +35,48 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
+from sqlalchemy import inspect, text
+
+
 def create_tables() -> None:
-    """Create all tables defined in models."""
+    """Create all tables defined in models and migrate missing columns for existing tables."""
     # Import models to register them with Base metadata
     from app.models import log, rule, alert  # noqa: F401
     Base.metadata.create_all(bind=engine)
+
+    inspector = inspect(engine)
+
+    # Check alerts table columns
+    if inspector.has_table("alerts"):
+        columns = {c["name"] for c in inspector.get_columns("alerts")}
+        with engine.begin() as conn:
+            if "classification" not in columns:
+                conn.execute(text("ALTER TABLE alerts ADD COLUMN classification VARCHAR(50) DEFAULT 'unclassified' NOT NULL"))
+            if "triage_status" not in columns:
+                conn.execute(text("ALTER TABLE alerts ADD COLUMN triage_status VARCHAR(50) DEFAULT 'open' NOT NULL"))
+            if "analyst_notes" not in columns:
+                conn.execute(text("ALTER TABLE alerts ADD COLUMN analyst_notes TEXT"))
+            if "primary_alert_id" not in columns:
+                conn.execute(text("ALTER TABLE alerts ADD COLUMN primary_alert_id INTEGER REFERENCES alerts(id)"))
+            if "reviewed_at" not in columns:
+                conn.execute(text("ALTER TABLE alerts ADD COLUMN reviewed_at DATETIME"))
+            if "reviewed_by" not in columns:
+                conn.execute(text("ALTER TABLE alerts ADD COLUMN reviewed_by VARCHAR(255) DEFAULT 'local analyst'"))
+
+    # Check sigma_rules table columns
+    if inspector.has_table("sigma_rules"):
+        columns = {c["name"] for c in inspector.get_columns("sigma_rules")}
+        with engine.begin() as conn:
+            if "validation_status" not in columns:
+                conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN validation_status VARCHAR(50) DEFAULT 'unvalidated' NOT NULL"))
+            if "validated_at" not in columns:
+                conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN validated_at DATETIME"))
+            if "validation_notes" not in columns:
+                conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN validation_notes TEXT"))
+            if "validation_evidence_batch_id" not in columns:
+                conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN validation_evidence_batch_id INTEGER REFERENCES upload_batches(id)"))
+            if "validation_evidence_filename" not in columns:
+                conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN validation_evidence_filename VARCHAR(255)"))
+            if "primary_validated_rule" not in columns:
+                conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN primary_validated_rule BOOLEAN DEFAULT 0 NOT NULL"))
+

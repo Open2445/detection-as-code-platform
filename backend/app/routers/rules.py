@@ -191,6 +191,52 @@ def create_raw_rule(payload: SigmaRuleRawCreate, db: Session = Depends(get_db)):
     return rule
 
 
+from datetime import datetime, timezone
+
+from app.models.log import UploadBatch
+from app.schemas.rule import (
+    SigmaRuleCreate,
+    SigmaRuleListOut,
+    SigmaRuleOut,
+    SigmaRuleRawCreate,
+    SigmaRuleUpdate,
+    SigmaRuleValidationUpdate,
+)
+
+
+@router.put("/{rule_id}/validation", response_model=SigmaRuleOut)
+def update_rule_validation(
+    rule_id: int,
+    payload: SigmaRuleValidationUpdate,
+    db: Session = Depends(get_db),
+):
+    """Update rule validation status, notes, evidence batch/filename, and primary status."""
+    rule = db.get(SigmaRule, rule_id)
+    if not rule:
+        raise HTTPException(status_code=404, detail="Rule not found")
+
+    batch_id = payload.validation_evidence_batch_id
+    filename = payload.validation_evidence_filename
+
+    if batch_id is not None:
+        batch = db.get(UploadBatch, batch_id)
+        if not batch:
+            raise HTTPException(status_code=404, detail=f"Upload batch #{batch_id} not found")
+        if not filename:
+            filename = batch.filename
+
+    rule.validation_status = payload.validation_status
+    rule.validation_notes = payload.validation_notes
+    rule.validation_evidence_batch_id = batch_id
+    rule.validation_evidence_filename = filename
+    rule.primary_validated_rule = payload.primary_validated_rule
+    rule.validated_at = datetime.now(timezone.utc)
+
+    db.commit()
+    db.refresh(rule)
+    return rule
+
+
 @router.delete("/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_rule(rule_id: int, db: Session = Depends(get_db)):
     """Delete a Sigma rule."""
@@ -199,3 +245,4 @@ def delete_rule(rule_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Rule not found")
     db.delete(rule)
     db.commit()
+

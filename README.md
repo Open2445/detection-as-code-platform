@@ -18,7 +18,25 @@
 - 📊 **Dashboard** — Stat cards, severity donut, 30-day timeline, top rules table
 - 🔎 **Alert Filtering** — Filter by hostname, username, rule, technique, tactic, time range
 - 📥 **CSV Export** — Export filtered alerts to CSV
+- 📋 **Alert Triage & Persistence** — Classify alerts (`unclassified`, `true_positive`, `false_positive`, `duplicate`, `needs_investigation`), manage triage status (`open`, `in_progress`, `closed`), record analyst notes, link duplicate alerts, and audit history.
+- 🧪 **Detection Rule Validation** — Track rule validation lifecycle (`unvalidated`, `validated_in_lab`, `needs_tuning`), attach EVTX evidence batch references, and mark primary validated rules.
 - 📖 **OpenAPI Docs** — Interactive Swagger UI at `/docs`
+
+---
+
+## Alert Triage and Rule Validation
+
+### Alert Triage
+- **Persistent Fields**: Each alert stores `classification`, `triage_status`, `analyst_notes`, `primary_alert_id` (for duplicates), `reviewed_at`, and `reviewed_by`.
+- **Immutable Triage History**: Every triage update appends a historical audit record to `alert_triage_history`.
+- **Duplicate Validation**: Backend enforces strict non-self reference, existence checks, and circularity prevention (`A -> B -> A`).
+- **Metrics & Filters**: Top KPI cards for Open alerts, True Positives, False Positives, Duplicates, and Needs Investigation.
+
+### Rule Validation
+- **Validation Lifecycle**: Rules can be marked as `unvalidated`, `validated_in_lab`, or `needs_tuning`.
+- **Evidence Linking**: Link lab validation to an uploaded EVTX evidence batch or filename.
+- **Primary Validated Rule**: Flag primary benchmark rules for MITRE techniques.
+
 
 ---
 

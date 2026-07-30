@@ -1,11 +1,56 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, ToggleLeft, ToggleRight, Eye, EyeOff, Search, Plus } from 'lucide-react';
+import { Shield, ToggleLeft, ToggleRight, Eye, EyeOff, Search, Plus, ShieldCheck, CheckCircle2, AlertTriangle, HelpCircle, Star } from 'lucide-react';
 import { rulesApi } from '../api/client';
 import type { SigmaRule } from '../types';
 import AddRuleModal from '../components/AddRuleModal';
+import RuleValidationModal from '../components/RuleValidationModal';
 
-function RuleRow({ rule, onToggle }: { rule: SigmaRule; onToggle: (r: SigmaRule) => void }) {
+function ValidationBadge({ rule }: { rule: SigmaRule }) {
+  const status = rule.validation_status || 'unvalidated';
+  let badgeClass = 'badge-medium';
+  let label = 'Unvalidated';
+  let icon = <HelpCircle size={12} />;
+
+  if (status === 'validated_in_lab') {
+    badgeClass = 'badge-low';
+    label = 'Validated in Lab';
+    icon = <CheckCircle2 size={12} />;
+  } else if (status === 'needs_tuning') {
+    badgeClass = 'badge-high';
+    label = 'Needs Tuning';
+    icon = <AlertTriangle size={12} />;
+  }
+
+  return (
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <span className={`badge ${badgeClass}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {icon}
+        {label}
+      </span>
+      {rule.primary_validated_rule && (
+        <span
+          className="badge"
+          style={{ background: 'rgba(234,179,8,0.15)', color: '#eab308', border: '1px solid rgba(234,179,8,0.3)', display: 'inline-flex', alignItems: 'center', gap: 3 }}
+          title="Primary Validated Rule"
+        >
+          <Star size={11} fill="currentColor" />
+          Primary
+        </span>
+      )}
+    </div>
+  );
+}
+
+function RuleRow({
+  rule,
+  onToggle,
+  onOpenValidation,
+}: {
+  rule: SigmaRule;
+  onToggle: (r: SigmaRule) => void;
+  onOpenValidation: (r: SigmaRule) => void;
+}) {
   const [expanded, setExpanded] = useState(false);
   const techniques = rule.mitre_techniques?.split(',').map(t => t.trim()).filter(Boolean) || [];
 
@@ -41,16 +86,28 @@ function RuleRow({ rule, onToggle }: { rule: SigmaRule; onToggle: (r: SigmaRule)
           {rule.mitre_tactics?.replace(/,/g, ' · ').replace(/-/g, ' ') || '—'}
         </td>
         <td>
+          <ValidationBadge rule={rule} />
+        </td>
+        <td>
           <span className={`badge ${rule.enabled ? 'badge-low' : 'badge-medium'}`}>
             {rule.enabled ? 'Enabled' : 'Disabled'}
           </span>
         </td>
         <td>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button
+              className="btn btn-outline btn-sm"
+              onClick={() => onOpenValidation(rule)}
+              title="Update Rule Validation"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', padding: '3px 8px' }}
+            >
+              <ShieldCheck size={13} />
+              Validate
+            </button>
             <button
               className="btn btn-outline btn-sm btn-icon"
               onClick={() => setExpanded(e => !e)}
-              title={expanded ? 'Hide YAML' : 'View YAML'}
+              title={expanded ? 'Hide Details' : 'View Details & YAML'}
             >
               {expanded ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -69,20 +126,35 @@ function RuleRow({ rule, onToggle }: { rule: SigmaRule; onToggle: (r: SigmaRule)
       </tr>
       {expanded && (
         <tr>
-          <td colSpan={6} style={{ padding: 0, background: 'var(--bg-elevated)' }}>
-            <pre style={{
-              padding: '12px 20px',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.73rem',
-              color: 'var(--text-secondary)',
-              overflowX: 'auto',
-              margin: 0,
-              whiteSpace: 'pre',
-              lineHeight: 1.6,
-              borderTop: '1px solid var(--border-subtle)',
-            }}>
-              {rule.yaml_content}
-            </pre>
+          <td colSpan={7} style={{ padding: 0, background: 'var(--bg-elevated)' }}>
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border-subtle)' }}>
+              {rule.validation_notes && (
+                <div style={{
+                  marginBottom: '12px', padding: '10px 14px', borderRadius: '6px',
+                  background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.2)',
+                  fontSize: '0.8rem', color: 'var(--text-primary)',
+                }}>
+                  <strong style={{ color: 'var(--accent)' }}>Validation Notes:</strong> {rule.validation_notes}
+                  {rule.validation_evidence_filename && (
+                    <div style={{ marginTop: '4px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      <strong>Evidence File:</strong> <code>{rule.validation_evidence_filename}</code>
+                      {rule.validation_evidence_batch_id && ` (Batch #${rule.validation_evidence_batch_id})`}
+                    </div>
+                  )}
+                </div>
+              )}
+              <pre style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.73rem',
+                color: 'var(--text-secondary)',
+                overflowX: 'auto',
+                margin: 0,
+                whiteSpace: 'pre',
+                lineHeight: 1.6,
+              }}>
+                {rule.yaml_content}
+              </pre>
+            </div>
           </td>
         </tr>
       )}
@@ -94,7 +166,9 @@ export default function Rules() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
+  const [validationFilter, setValidationFilter] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedValidationRule, setSelectedValidationRule] = useState<SigmaRule | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['rules'],
@@ -112,7 +186,8 @@ export default function Rules() {
       r.name.toLowerCase().includes(search.toLowerCase()) ||
       (r.mitre_techniques || '').includes(search.toUpperCase());
     const matchSev = !severityFilter || r.severity === severityFilter;
-    return matchSearch && matchSev;
+    const matchVal = !validationFilter || (r.validation_status || 'unvalidated') === validationFilter;
+    return matchSearch && matchSev && matchVal;
   });
 
   return (
@@ -137,6 +212,13 @@ export default function Rules() {
       <AddRuleModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['rules'] })}
+      />
+
+      <RuleValidationModal
+        isOpen={!!selectedValidationRule}
+        rule={selectedValidationRule}
+        onClose={() => setSelectedValidationRule(null)}
         onSuccess={() => qc.invalidateQueries({ queryKey: ['rules'] })}
       />
 
@@ -169,6 +251,15 @@ export default function Rules() {
             <option value="informational">Informational</option>
           </select>
         </div>
+        <div className="form-group">
+          <label className="form-label">Validation</label>
+          <select className="form-select" value={validationFilter} onChange={e => setValidationFilter(e.target.value)}>
+            <option value="">All validation states</option>
+            <option value="unvalidated">Unvalidated</option>
+            <option value="validated_in_lab">Validated in Lab</option>
+            <option value="needs_tuning">Needs Tuning</option>
+          </select>
+        </div>
       </div>
 
       {/* Rules Table */}
@@ -183,6 +274,7 @@ export default function Rules() {
                 <th>Title</th>
                 <th>Techniques</th>
                 <th>Tactics</th>
+                <th>Validation</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -190,7 +282,7 @@ export default function Rules() {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <div className="empty-state" style={{ padding: '32px 0' }}>
                       <Shield size={28} className="empty-state-icon" />
                       <div className="empty-state-sub">No rules match your filter</div>
@@ -203,6 +295,7 @@ export default function Rules() {
                     key={rule.id}
                     rule={rule}
                     onToggle={toggleMutation.mutate}
+                    onOpenValidation={setSelectedValidationRule}
                   />
                 ))
               )}
@@ -213,3 +306,4 @@ export default function Rules() {
     </div>
   );
 }
+

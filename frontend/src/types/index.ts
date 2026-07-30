@@ -35,7 +35,8 @@ export interface UploadResponse {
   message: string;
 }
 
-// ── Rule Types ────────────────────────────────────────────────────────────────
+export type ValidationStatus = 'unvalidated' | 'validated_in_lab' | 'needs_tuning';
+
 export interface SigmaRule {
   id: number;
   name: string;
@@ -50,6 +51,12 @@ export interface SigmaRule {
   created_at: string;
   updated_at: string | null;
   enabled: boolean;
+  validation_status: ValidationStatus;
+  validated_at: string | null;
+  validation_notes: string | null;
+  validation_evidence_batch_id: number | null;
+  validation_evidence_filename: string | null;
+  primary_validated_rule: boolean;
 }
 
 export interface SigmaRuleList {
@@ -57,8 +64,18 @@ export interface SigmaRuleList {
   items: SigmaRule[];
 }
 
+export interface RuleValidationPayload {
+  validation_status: ValidationStatus;
+  validation_notes?: string | null;
+  validation_evidence_batch_id?: number | null;
+  validation_evidence_filename?: string | null;
+  primary_validated_rule?: boolean;
+}
+
 // ── Alert Types ───────────────────────────────────────────────────────────────
 export type Severity = 'critical' | 'high' | 'medium' | 'low' | 'informational';
+export type AlertClassification = 'unclassified' | 'true_positive' | 'false_positive' | 'duplicate' | 'needs_investigation';
+export type TriageStatus = 'open' | 'in_progress' | 'closed';
 
 export interface Alert {
   id: number;
@@ -76,6 +93,41 @@ export interface Alert {
   event_id: number | null;
   triggered_at: string;
   details_json: string | null;
+  classification: AlertClassification;
+  triage_status: TriageStatus;
+  analyst_notes: string | null;
+  primary_alert_id: number | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+}
+
+export interface AlertTriagePayload {
+  classification?: AlertClassification;
+  triage_status?: TriageStatus;
+  analyst_notes?: string | null;
+  primary_alert_id?: number | null;
+  reviewed_by?: string;
+}
+
+export interface AlertTriageHistory {
+  id: number;
+  alert_id: number;
+  previous_classification: string | null;
+  new_classification: string;
+  previous_triage_status: string | null;
+  new_triage_status: string;
+  analyst_notes: string | null;
+  primary_alert_id: number | null;
+  reviewed_by: string;
+  created_at: string;
+}
+
+export interface AlertCounters {
+  open_alerts: number;
+  true_positives: number;
+  false_positives: number;
+  duplicates: number;
+  needs_investigation: number;
 }
 
 export interface AlertPage {
@@ -93,11 +145,14 @@ export interface AlertFilters {
   tactic?: string;
   severity?: string;
   batch_id?: number;
+  classification?: string;
+  triage_status?: string;
   from_date?: string;
   to_date?: string;
   page?: number;
   page_size?: number;
 }
+
 
 // ── Detection Types ───────────────────────────────────────────────────────────
 export interface DetectionRunResult {
