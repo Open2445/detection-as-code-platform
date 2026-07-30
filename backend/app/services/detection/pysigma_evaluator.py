@@ -2,9 +2,9 @@
 PySigmaEvaluator — in-memory Sigma rule evaluator.
 
 Supported Sigma syntax subset (v1):
-  ─ Selections:   field:value, field|contains, field|startswith, field|endswith
+  ─ Selections:   field:value, field|contains, field|contains|all, field|startswith, field|endswith
   ─ Keywords:     plain keyword search across all field values
-  ─ List values:  OR logic within a field
+  ─ List values:  OR logic within a field (or AND logic with |all modifier)
   ─ Multi-field:  AND logic across fields in a selection
   ─ Quantifiers:  1 of <name>*, all of <name>*, 1 of them, all of them
   ─ Operators:    and, or, not
@@ -16,6 +16,8 @@ import fnmatch
 import logging
 import yaml
 from typing import Any, Dict, List, Optional
+import json
+from app.schemas.rule import SigmaRuleJSONSchema
 
 from app.services.detection.base import DetectionEngine
 
@@ -140,13 +142,22 @@ class PySigmaEvaluator(DetectionEngine):
     subset without requiring sigma-cli or any SIEM backend.
     """
 
-    def evaluate(self, rule_yaml: str, log_dict: Dict[str, Any]) -> bool:
+    def evaluate(self, rule_content: str, log_dict: Dict[str, Any], rule_format: str = "yaml") -> bool:
         """Return True if log_dict matches the Sigma rule."""
-        try:
-            rule = yaml.safe_load(rule_yaml)
-        except yaml.YAMLError as exc:
-            logger.warning("Failed to parse Sigma rule YAML: %s", exc)
-            return False
+        if rule_format == "json":
+            try:
+                parsed_dict = json.loads(rule_content)
+                SigmaRuleJSONSchema.model_validate(parsed_dict)
+                rule = parsed_dict
+            except Exception as exc:
+                logger.warning("Failed to parse or validate JSON rule: %s", exc)
+                return False
+        else:
+            try:
+                rule = yaml.safe_load(rule_content)
+            except yaml.YAMLError as exc:
+                logger.warning("Failed to parse Sigma rule YAML: %s", exc)
+                return False
 
         detection = rule.get("detection", {})
         if not detection:
@@ -177,16 +188,25 @@ class PySigmaEvaluator(DetectionEngine):
             return False
 
     def batch_evaluate(
-        self, rule_yaml: str, log_entries: List[Dict[str, Any]]
+        self, rule_content: str, log_entries: List[Dict[str, Any]], rule_format: str = "yaml"
     ) -> List[bool]:
         """Evaluate one rule against many log entries.
 
-        Pre-parses YAML once for efficiency.
+        Pre-parses once for efficiency.
         """
-        try:
-            rule = yaml.safe_load(rule_yaml)
-        except yaml.YAMLError:
-            return [False] * len(log_entries)
+        if rule_format == "json":
+            try:
+                parsed_dict = json.loads(rule_content)
+                SigmaRuleJSONSchema.model_validate(parsed_dict)
+                rule = parsed_dict
+            except Exception as exc:
+                logger.warning("Failed to parse or validate JSON rule in batch: %s", exc)
+                return [False] * len(log_entries)
+        else:
+            try:
+                rule = yaml.safe_load(rule_content)
+            except yaml.YAMLError:
+                return [False] * len(log_entries)
 
         detection = rule.get("detection", {})
         if not detection:
@@ -315,8 +335,10 @@ def _match_field(
     if expected is None:
         return actual is None
 
-    # List of expected → OR logic
+    # List of expected -> OR logic by default, or AND logic if 'all' modifier is present
     if isinstance(expected, list):
+        if "all" in modifiers:
+            return all(_apply_modifiers(actual, str(e), modifiers) for e in expected)
         return any(_apply_modifiers(actual, str(e), modifiers) for e in expected)
     elif isinstance(expected, bool):
         # Boolean match

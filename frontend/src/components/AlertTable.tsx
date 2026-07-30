@@ -70,10 +70,10 @@ function getLabGuidance(ruleName: string): { title: string; text: string; color:
       color: '#c084fc',
     };
   }
-  if (ruleName === 'regsvr32_network_connection') {
+  if (ruleName === 'regsvr32_remote_scriptlet_execution') {
     return {
       title: 'Lab Guidance: Needs Investigation',
-      text: 'regsvr32_network_connection requires analyst investigation initially and is not automatically false positive.',
+      text: 'regsvr32_remote_scriptlet_execution (Squiblydoo/T1218.010) requires analyst investigation and is not automatically a false positive.',
       color: '#fde047',
     };
   }

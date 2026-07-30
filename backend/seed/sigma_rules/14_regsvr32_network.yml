@@ -1,5 +1,5 @@
-title: Regsvr32 Suspicious Network Activity
-name: regsvr32_network_connection
+title: Regsvr32 Remote Scriptlet Execution
+name: regsvr32_remote_scriptlet_execution
 status: experimental
 description: Detects regsvr32.exe loading scripts from remote URLs (Squiblydoo/ATT&CK T1218.010)
 references:
@@ -13,15 +13,17 @@ logsource:
   category: process_creation
   product: windows
 detection:
-  selection:
+  selection_img:
     Image|endswith: '\regsvr32.exe'
+  selection_url:
     CommandLine|contains:
-      - '/u'
-      - '/s'
       - 'http://'
       - 'https://'
+  selection_flags:
+    CommandLine|contains|all:
+      - '/i:'
       - 'scrobj.dll'
-  condition: selection
+  condition: all of selection_*
 falsepositives:
   - Legitimate COM component registration
 level: high

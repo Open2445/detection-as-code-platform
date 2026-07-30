@@ -57,6 +57,40 @@ export interface SigmaRule {
   validation_evidence_batch_id: number | null;
   validation_evidence_filename: string | null;
   primary_validated_rule: boolean;
+  rule_format: string;
+  json_content: string | null;
+}
+
+export interface RuleChange {
+  id: number;
+  rule_id: number;
+  rule_format: string;
+  previous_content: string | null;
+  new_content: string;
+  change_reason: string;
+  expected_outcome: string | null;
+  changed_by: string;
+  changed_at: string;
+  change_type: 'draft' | 'submitted' | 'applied' | 'reverted';
+}
+
+export interface RuleChangeCreate {
+  rule_format: string;
+  new_content: string;
+  change_reason: string;
+  expected_outcome?: string | null;
+}
+
+export interface RuleValidateRequest {
+  rule_format: string;
+  content: string;
+}
+
+export interface RuleValidateResponse {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  parsed_format: string;
 }
 
 export interface SigmaRuleList {

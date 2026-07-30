@@ -1,0 +1,15 @@
+import sqlite3
+conn = sqlite3.connect('dac.db')
+c = conn.cursor()
+c.execute("PRAGMA table_info(sigma_rules)")
+print("sigma_rules columns:", [r[1] for r in c.fetchall()])
+c.execute("PRAGMA table_info(alerts)")
+print("alerts columns:", [r[1] for r in c.fetchall()])
+c.execute("PRAGMA table_info(alert_triage_history)")
+print("alert_triage_history columns:", [r[1] for r in c.fetchall()])
+# Check if any data exists
+c.execute("SELECT COUNT(*) FROM sigma_rules")
+print("sigma_rules count:", c.fetchone())
+c.execute("SELECT COUNT(*) FROM alerts")
+print("alerts count:", c.fetchone())
+conn.close()

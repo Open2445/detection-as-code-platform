@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Shield, ToggleLeft, ToggleRight, Eye, EyeOff, Search, Plus, ShieldCheck, CheckCircle2, AlertTriangle, HelpCircle, Star } from 'lucide-react';
+import { Shield, ToggleLeft, ToggleRight, Eye, EyeOff, Search, Plus, ShieldCheck, CheckCircle2, AlertTriangle, HelpCircle, Star, Edit2 } from 'lucide-react';
 import { rulesApi } from '../api/client';
 import type { SigmaRule } from '../types';
 import AddRuleModal from '../components/AddRuleModal';
 import RuleValidationModal from '../components/RuleValidationModal';
+import EditRuleModal from '../components/EditRuleModal';
+import RuleChangeHistory from '../components/RuleChangeHistory';
 
 function ValidationBadge({ rule }: { rule: SigmaRule }) {
   const status = rule.validation_status || 'unvalidated';
@@ -46,10 +48,12 @@ function RuleRow({
   rule,
   onToggle,
   onOpenValidation,
+  onEdit,
 }: {
   rule: SigmaRule;
   onToggle: (r: SigmaRule) => void;
   onOpenValidation: (r: SigmaRule) => void;
+  onEdit: (r: SigmaRule) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const techniques = rule.mitre_techniques?.split(',').map(t => t.trim()).filter(Boolean) || [];
@@ -105,9 +109,18 @@ function RuleRow({
               Validate
             </button>
             <button
+              className="btn btn-outline btn-sm"
+              onClick={() => onEdit(rule)}
+              title="Edit Rule"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: '0.75rem', padding: '3px 8px' }}
+            >
+              <Edit2 size={13} />
+              Edit
+            </button>
+            <button
               className="btn btn-outline btn-sm btn-icon"
               onClick={() => setExpanded(e => !e)}
-              title={expanded ? 'Hide Details' : 'View Details & YAML'}
+              title={expanded ? 'Hide Details' : 'View Details & History'}
             >
               {expanded ? <EyeOff size={14} /> : <Eye size={14} />}
             </button>
@@ -154,6 +167,10 @@ function RuleRow({
               }}>
                 {rule.yaml_content}
               </pre>
+              
+              <div style={{ marginTop: 16, borderTop: '1px dashed var(--border-subtle)', paddingTop: 16 }}>
+                <RuleChangeHistory rule={rule} />
+              </div>
             </div>
           </td>
         </tr>
@@ -169,6 +186,7 @@ export default function Rules() {
   const [validationFilter, setValidationFilter] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedValidationRule, setSelectedValidationRule] = useState<SigmaRule | null>(null);
+  const [editingRule, setEditingRule] = useState<SigmaRule | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ['rules'],
@@ -219,6 +237,13 @@ export default function Rules() {
         isOpen={!!selectedValidationRule}
         rule={selectedValidationRule}
         onClose={() => setSelectedValidationRule(null)}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['rules'] })}
+      />
+      
+      <EditRuleModal
+        isOpen={!!editingRule}
+        rule={editingRule}
+        onClose={() => setEditingRule(null)}
         onSuccess={() => qc.invalidateQueries({ queryKey: ['rules'] })}
       />
 
@@ -296,6 +321,7 @@ export default function Rules() {
                     rule={rule}
                     onToggle={toggleMutation.mutate}
                     onOpenValidation={setSelectedValidationRule}
+                    onEdit={setEditingRule}
                   />
                 ))
               )}

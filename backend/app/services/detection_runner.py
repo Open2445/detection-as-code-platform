@@ -69,7 +69,9 @@ def run_detections(db: Session, batch_id: int) -> dict:
 
         # Batch evaluate all log entries against this rule
         log_data_only = [d for _, d in log_dicts]
-        results = _ENGINE.batch_evaluate(rule.yaml_content, log_data_only)
+        rule_format = getattr(rule, "rule_format", "yaml")
+        rule_content = rule.json_content if rule_format == "json" else rule.yaml_content
+        results = _ENGINE.batch_evaluate(rule_content, log_data_only, rule_format=rule_format)
 
         for (entry, log_dict), matched in zip(log_dicts, results):
             if matched:

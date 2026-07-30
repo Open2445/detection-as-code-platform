@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.database import create_tables
-from app.routers import logs, rules, detections, alerts, dashboard
+from app.routers import logs, rules, rule_changes, detections, alerts, dashboard
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ app.add_middleware(
 # ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(logs.router, prefix="/api/logs", tags=["Logs"])
 app.include_router(rules.router, prefix="/api/rules", tags=["Rules"])
+app.include_router(rule_changes.router, prefix="/api/rules", tags=["Rule Changes"])
 app.include_router(detections.router, prefix="/api/detections", tags=["Detections"])
 app.include_router(alerts.router, prefix="/api/alerts", tags=["Alerts"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])

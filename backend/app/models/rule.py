@@ -22,6 +22,10 @@ class SigmaRule(Base):
     # Raw YAML content
     yaml_content = Column(Text, nullable=False)
 
+    # JSON Logic content and format specifier
+    rule_format = Column(String(50), default="yaml", nullable=False)
+    json_content = Column(Text, nullable=True)
+
     # MITRE metadata parsed from rule tags (comma-separated lists)
     mitre_tactics = Column(String(500), nullable=True)      # e.g. "execution,persistence"
     mitre_techniques = Column(String(500), nullable=True)   # e.g. "T1059.001,T1053"
@@ -48,6 +52,7 @@ class SigmaRule(Base):
     # Relationships
     alerts = relationship("Alert", back_populates="rule")
     validation_evidence_batch = relationship("UploadBatch")
+    changes = relationship("RuleChange", back_populates="rule", cascade="all, delete-orphan", order_by="desc(RuleChange.changed_at)")
 
     def __repr__(self) -> str:
         return f"<SigmaRule id={self.id} name={self.name!r} severity={self.severity!r} validation={self.validation_status!r}>"

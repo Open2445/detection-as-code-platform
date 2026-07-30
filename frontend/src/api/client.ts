@@ -4,7 +4,7 @@
 import axios from 'axios';
 import type {
   UploadBatch, UploadResponse, LogEntryPage,
-  SigmaRule, SigmaRuleList, RuleValidationPayload,
+  SigmaRule, SigmaRuleList, RuleValidationPayload, RuleChange, RuleChangeCreate, RuleValidateRequest, RuleValidateResponse,
   Alert, AlertPage, AlertFilters, AlertTriagePayload, AlertTriageHistory, AlertCounters, DetectionRunResult,
   DashboardStats, TimelineResponse, MitreCoverage,
 } from '../types';
@@ -87,6 +87,36 @@ export const rulesApi = {
 
   createRaw: async (ruleText: string, format: string = 'auto'): Promise<SigmaRule> => {
     const res = await api.post<SigmaRule>('/rules/raw', { rule_text: ruleText, format });
+    return res.data;
+  },
+};
+
+// ── Rule Changes ──────────────────────────────────────────────────────────────
+export const ruleChangesApi = {
+  validate: async (ruleId: number, payload: RuleValidateRequest): Promise<RuleValidateResponse> => {
+    const res = await api.post<RuleValidateResponse>(`/rules/${ruleId}/changes/validate`, payload);
+    return res.data;
+  },
+
+  list: async (ruleId: number): Promise<RuleChange[]> => {
+    const res = await api.get<RuleChange[]>(`/rules/${ruleId}/changes`);
+    return res.data;
+  },
+
+  create: async (ruleId: number, payload: RuleChangeCreate, changeType: 'draft' | 'submitted' = 'draft'): Promise<RuleChange> => {
+    const res = await api.post<RuleChange>(`/rules/${ruleId}/changes`, payload, {
+      params: { change_type: changeType }
+    });
+    return res.data;
+  },
+
+  apply: async (ruleId: number, changeId: number): Promise<RuleChange> => {
+    const res = await api.post<RuleChange>(`/rules/${ruleId}/changes/${changeId}/apply`, {});
+    return res.data;
+  },
+
+  revert: async (ruleId: number, changeId: number): Promise<RuleChange> => {
+    const res = await api.post<RuleChange>(`/rules/${ruleId}/changes/${changeId}/revert`, {});
     return res.data;
   },
 };

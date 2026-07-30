@@ -1,8 +1,27 @@
 """Pydantic schemas for Sigma rules."""
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, ConfigDict, field_validator
 
+
+class SigmaRuleJSONDetection(BaseModel):
+    condition: str
+    model_config = ConfigDict(extra='allow')
+
+class SigmaRuleJSONSchema(BaseModel):
+    title: str
+    name: Optional[str] = None
+    description: Optional[str] = None
+    logsource: Optional[Dict[str, Any]] = None
+    detection: SigmaRuleJSONDetection
+
+    @field_validator("detection")
+    @classmethod
+    def validate_detection_selections(cls, v: SigmaRuleJSONDetection) -> SigmaRuleJSONDetection:
+        selections = [k for k in v.model_dump().keys() if k != "condition"]
+        if not selections:
+            raise ValueError("JSON rule detection must contain at least one selection group")
+        return v
 
 class SigmaRuleCreate(BaseModel):
     name: str
@@ -10,6 +29,8 @@ class SigmaRuleCreate(BaseModel):
     description: Optional[str] = None
     severity: str = "medium"
     yaml_content: str
+    rule_format: str = "yaml"
+    json_content: Optional[str] = None
     enabled: bool = True
 
     @field_validator("severity")
@@ -34,6 +55,8 @@ class SigmaRuleUpdate(BaseModel):
     description: Optional[str] = None
     severity: Optional[str] = None
     yaml_content: Optional[str] = None
+    rule_format: Optional[str] = None
+    json_content: Optional[str] = None
     enabled: Optional[bool] = None
     validation_status: Optional[str] = None
     validation_notes: Optional[str] = None
@@ -73,6 +96,8 @@ class SigmaRuleOut(BaseModel):
     description: Optional[str] = None
     severity: str
     yaml_content: str
+    rule_format: str
+    json_content: Optional[str] = None
     mitre_tactics: Optional[str] = None
     mitre_techniques: Optional[str] = None
     mitre_tactic_ids: Optional[str] = None

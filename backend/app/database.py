@@ -41,7 +41,7 @@ from sqlalchemy import inspect, text
 def create_tables() -> None:
     """Create all tables defined in models and migrate missing columns for existing tables."""
     # Import models to register them with Base metadata
-    from app.models import log, rule, alert  # noqa: F401
+    from app.models import log, rule, alert, rule_change  # noqa: F401
     Base.metadata.create_all(bind=engine)
 
     inspector = inspect(engine)
@@ -79,4 +79,15 @@ def create_tables() -> None:
                 conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN validation_evidence_filename VARCHAR(255)"))
             if "primary_validated_rule" not in columns:
                 conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN primary_validated_rule BOOLEAN DEFAULT 0 NOT NULL"))
+            if "rule_format" not in columns:
+                conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN rule_format VARCHAR(50) DEFAULT 'yaml' NOT NULL"))
+            if "json_content" not in columns:
+                conn.execute(text("ALTER TABLE sigma_rules ADD COLUMN json_content TEXT"))
+
+    # Check rule_changes table columns
+    if inspector.has_table("rule_changes"):
+        columns = {c["name"] for c in inspector.get_columns("rule_changes")}
+        with engine.begin() as conn:
+            if "parent_change_id" not in columns:
+                conn.execute(text("ALTER TABLE rule_changes ADD COLUMN parent_change_id INTEGER REFERENCES rule_changes(id)"))
 
