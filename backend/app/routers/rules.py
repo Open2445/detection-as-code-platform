@@ -1,4 +1,5 @@
-"""Sigma rules CRUD endpoints."""
+import json
+import re
 import yaml
 from typing import List, Optional
 
@@ -7,7 +8,13 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.rule import SigmaRule
-from app.schemas.rule import SigmaRuleCreate, SigmaRuleListOut, SigmaRuleOut, SigmaRuleUpdate
+from app.schemas.rule import (
+    SigmaRuleCreate,
+    SigmaRuleListOut,
+    SigmaRuleOut,
+    SigmaRuleRawCreate,
+    SigmaRuleUpdate,
+)
 from app.services.mitre import parse_sigma_tags
 
 router = APIRouter()
@@ -108,6 +115,77 @@ def update_rule(rule_id: int, payload: SigmaRuleUpdate, db: Session = Depends(ge
     for field, value in update_data.items():
         setattr(rule, field, value)
 
+    db.commit()
+    db.refresh(rule)
+    return rule
+
+
+@router.post("/raw", response_model=SigmaRuleOut, status_code=status.HTTP_201_CREATED)
+def create_raw_rule(payload: SigmaRuleRawCreate, db: Session = Depends(get_db)):
+    """Create a new Sigma rule from raw YAML or JSON input."""
+    raw_text = payload.rule_text.strip()
+    if not raw_text:
+        raise HTTPException(status_code=400, detail="Rule content cannot be empty")
+
+    fmt = payload.format.lower()
+    is_json = False
+
+    if fmt == "json" or (fmt == "auto" and raw_text.startswith("{")):
+        is_json = True
+
+    parsed_dict = None
+    yaml_str = ""
+
+    if is_json:
+        try:
+            parsed_dict = json.loads(raw_text)
+            if not isinstance(parsed_dict, dict):
+                raise ValueError("JSON rule must be a JSON object")
+            yaml_str = yaml.dump(parsed_dict, sort_keys=False)
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid JSON rule format: {exc}")
+    else:
+        try:
+            parsed_dict = yaml.safe_load(raw_text)
+            if not isinstance(parsed_dict, dict):
+                raise ValueError("YAML rule must be a valid mapping")
+            yaml_str = raw_text
+        except Exception as exc:
+            raise HTTPException(status_code=422, detail=f"Invalid YAML rule format: {exc}")
+
+    # Extract metadata fields
+    title = parsed_dict.get("title") or "Untitled Sigma Rule"
+    rule_name = parsed_dict.get("name") or parsed_dict.get("id")
+    if not rule_name:
+        rule_name = re.sub(r"[^a-z0-9_]+", "_", title.lower()).strip("_")
+    rule_name = str(rule_name)
+
+    description = parsed_dict.get("description")
+    raw_level = (parsed_dict.get("level") or parsed_dict.get("severity") or "medium").lower()
+
+    allowed_severities = {"critical", "high", "medium", "low", "informational"}
+    severity = raw_level if raw_level in allowed_severities else "medium"
+
+    # Check for duplicate rule name
+    existing = db.query(SigmaRule).filter(SigmaRule.name == rule_name).first()
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Rule with name/identifier '{rule_name}' already exists"
+        )
+
+    mitre = _extract_mitre_from_yaml(yaml_str)
+
+    rule = SigmaRule(
+        name=rule_name,
+        title=title,
+        description=description,
+        severity=severity,
+        yaml_content=yaml_str,
+        enabled=True,
+        **mitre,
+    )
+    db.add(rule)
     db.commit()
     db.refresh(rule)
     return rule

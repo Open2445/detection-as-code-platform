@@ -21,6 +21,11 @@ class SigmaRuleCreate(BaseModel):
         return v.lower()
 
 
+class SigmaRuleRawCreate(BaseModel):
+    rule_text: str
+    format: str = "auto"  # "yaml", "json", "auto"
+
+
 class SigmaRuleUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None

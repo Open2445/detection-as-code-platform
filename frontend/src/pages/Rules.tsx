@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { format, parseISO } from 'date-fns';
-import { Shield, ToggleLeft, ToggleRight, Eye, EyeOff, Search } from 'lucide-react';
+import { Shield, ToggleLeft, ToggleRight, Eye, EyeOff, Search, Plus } from 'lucide-react';
 import { rulesApi } from '../api/client';
 import type { SigmaRule } from '../types';
+import AddRuleModal from '../components/AddRuleModal';
 
 function RuleRow({ rule, onToggle }: { rule: SigmaRule; onToggle: (r: SigmaRule) => void }) {
   const [expanded, setExpanded] = useState(false);
@@ -94,6 +94,7 @@ export default function Rules() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [severityFilter, setSeverityFilter] = useState('');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ['rules'],
@@ -123,7 +124,21 @@ export default function Rules() {
             {data?.total ?? 0} rules loaded · PySigma in-memory evaluator
           </p>
         </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => setIsAddModalOpen(true)}
+          style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+        >
+          <Plus size={16} />
+          Add Rule
+        </button>
       </div>
+
+      <AddRuleModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => qc.invalidateQueries({ queryKey: ['rules'] })}
+      />
 
       {/* Search + Filter */}
       <div className="filter-bar mb-4">

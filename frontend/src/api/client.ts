@@ -79,6 +79,11 @@ export const rulesApi = {
   toggleEnabled: async (rule: SigmaRule): Promise<SigmaRule> => {
     return rulesApi.update(rule.id, { enabled: !rule.enabled });
   },
+
+  createRaw: async (ruleText: string, format: string = 'auto'): Promise<SigmaRule> => {
+    const res = await api.post<SigmaRule>('/rules/raw', { rule_text: ruleText, format });
+    return res.data;
+  },
 };
 
 // ── Detections ────────────────────────────────────────────────────────────────

@@ -2,6 +2,8 @@
 import io
 import json
 import logging
+import os
+import tempfile
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -103,9 +105,13 @@ def _xml_to_dict(xml_str: str) -> Dict[str, Any]:
 def parse_evtx_bytes(content: bytes) -> List[Dict[str, Any]]:
     """Parse EVTX binary log content into a list of log dictionaries."""
     records = []
+    tmp_path = None
     try:
-        buf = io.BytesIO(content)
-        with evtx.Evtx(buf) as log:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".evtx") as tmp:
+            tmp.write(content)
+            tmp_path = tmp.name
+
+        with evtx.Evtx(tmp_path) as log:
             for record in log.records():
                 try:
                     xml_str = record.xml()
@@ -117,6 +123,12 @@ def parse_evtx_bytes(content: bytes) -> List[Dict[str, Any]]:
                     continue
     except Exception as exc:
         raise ValueError(f"Failed to parse EVTX file: {exc}") from exc
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
     return records
 
